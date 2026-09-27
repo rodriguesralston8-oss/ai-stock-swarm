@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [userId, setUserId] = useState<string | null>(null);
   const router = useRouter();
   const [tradeShares, setTradeShares] = useState(100);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(true);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -24,6 +25,10 @@ export default function Dashboard() {
     };
     checkUser();
   }, [router]);
+
+  useEffect(() => {
+    setIsLoadingMetrics(false);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -58,7 +63,6 @@ export default function Dashboard() {
     if (!ticker) return;
     
     try {
-      // Fetch current authenticated user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
       
       if (userError || !user) {
@@ -67,14 +71,13 @@ export default function Dashboard() {
         return;
       }
       
-      // Use specific entry price as specified
       const entryPrice = 150.00;
       
       const { error } = await supabase
         .from('paper_trades')
         .insert({
           user_id: user.id,
-          ticker: 'AAPL',  // Hardcoded as per spec
+          ticker: 'AAPL',
           direction: side,
           entry_price: entryPrice,
           status: 'OPEN',
@@ -95,7 +98,6 @@ export default function Dashboard() {
     }
   };
 
-  // Mock technical indicators (replace with real data from API when available)
   const mockIndicators = {
     rsi: 62.4,
     sma20: 178.32,
@@ -106,10 +108,17 @@ export default function Dashboard() {
   if (!userId) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400">
-        <div className="animate-spin" size={40} />
+        <Loader2 className="animate-spin" size={40} />
       </div>
     );
   }
+
+  const SkeletonCard = () => (
+    <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm animate-pulse">
+      <div className="h-4 w-1/4 bg-slate-800 rounded mb-4"></div>
+      <div className="h-10 w-1/2 bg-slate-800 rounded"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col md:flex-row">
@@ -139,7 +148,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-3 w-full md:w-auto">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} placeholder="Enter Ticker..." className="bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-emerald-500 w-32 uppercase" />
+              <input type="text" value={ticker} onChange={(e) => setTicker(e.target.value.toUpperCase())} placeholder="Enter Ticker..." className="bg-slate-900 border border-slate-700 text-white pl-10 pr-4 py-2.5 rounded-lg focus:outline-none focus:border-emerald-500 w-32 uppercase font-mono" />
             </div>
             <button onClick={handleScan} disabled={isScanning || !ticker} className="bg-emerald-500 hover:bg-emerald-600 disabled:bg-emerald-800 text-slate-950 font-semibold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-emerald-500/20 flex items-center gap-2">
               {isScanning ? <Loader2 className="animate-spin" size={20} /> : "Analyze"}
@@ -148,28 +157,38 @@ export default function Dashboard() {
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
-            <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">Active Agents</h3><ShieldCheck size={20} className="text-blue-400" /></div>
-            <p className="text-4xl font-bold font-mono">4 <span className="text-lg text-slate-500 font-normal">/ 4</span></p>
-          </div>
-          <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
-            <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">AI Direction</h3><Activity size={20} className={`text-emerald-400 ${isScanning ? 'animate-pulse' : ''}`} /></div>
-            <p className={`text-4xl font-bold font-mono ${aiResult?.direction === 'ERROR' ? 'text-red-500' : aiResult?.direction === 'BEARISH' ? 'text-red-400' : 'text-emerald-400'}`}>
-              {aiResult ? aiResult.direction : "--"}
-            </p>
-          </div>
-          <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
-            <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">Model Confidence</h3><TrendingUp size={20} className="text-blue-400" /></div>
-            <p className={`font-bold font-mono ${aiResult?.direction === 'ERROR' ? 'text-sm text-red-400' : 'text-4xl text-blue-400'}`}>
-              {aiResult ? aiResult.confidence : "--"}
-            </p>
-          </div>
+          {isLoadingMetrics ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
+                <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">Active Agents</h3><ShieldCheck size={20} className="text-blue-400" /></div>
+                <p className="text-4xl font-bold font-mono">4 <span className="text-lg text-slate-500 font-normal">/ 4</span></p>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
+                <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">AI Direction</h3><Activity size={20} className={`text-emerald-400 ${isScanning ? 'animate-pulse' : ''}`} /></div>
+                <p className={`text-4xl font-bold font-mono ${aiResult?.direction === 'ERROR' ? 'text-red-500' : aiResult?.direction === 'BEARISH' ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {aiResult ? aiResult.direction : "--"}
+                </p>
+              </div>
+              <div className="bg-slate-900/80 border border-slate-800 p-6 rounded-xl shadow-sm">
+                <div className="flex justify-between items-start mb-4"><h3 className="text-slate-400 font-medium">Model Confidence</h3><TrendingUp size={20} className="text-blue-400" /></div>
+                <p className={`font-bold font-mono ${aiResult?.direction === 'ERROR' ? 'text-sm text-red-400' : 'text-4xl text-blue-400'}`}>
+                  {aiResult ? aiResult.confidence : "--"}
+                </p>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - TradingView Chart (2/3 width) */}
           <div className="lg:col-span-2">
-            <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-sm h-[460px]">
+            <div className="bg-slate-900/80 border border-slate-800 rounded-xl overflow-hidden shadow-none h-[460px]">
               {!aiResult || aiResult.direction === 'ERROR' ? (
                 <div className="flex-1 flex flex-col items-center justify-center h-full">
                   <BarChart2 size={48} className="text-slate-700 mb-4" />
@@ -251,7 +270,6 @@ export default function Dashboard() {
   );
 }
 
-// Helper component for technical indicator rows
 function TechnicalIndicatorRow({ 
   label, 
   value, 

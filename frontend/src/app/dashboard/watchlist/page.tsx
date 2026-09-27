@@ -5,18 +5,21 @@ import { Activity, TrendingUp, LineChart, LogOut, Plus, Trash2, Cpu } from 'luci
 import { supabase } from '../../../lib/supabase';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export default function Watchlist() {
   const [tickers, setTickers] = useState<string[]>(['AAPL', 'TSLA', 'NVDA', 'MSFT']);
   const [newTicker, setNewTicker] = useState("");
   const [userId, setUserId] = useState<string | null>(null);
   const [status, setStatus] = useState("Idle");
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) router.push('/login');
       else setUserId(session.user.id);
+      setIsLoading(false);
     });
   }, [router]);
 
@@ -33,7 +36,7 @@ export default function Watchlist() {
   };
 
   const dispatchSwarm = async (e: React.MouseEvent) => {
-    e.preventDefault(); // CRITICAL FIX: Prevent silent browser reloads
+    e.preventDefault();
     if (!userId || tickers.length === 0) return;
     setStatus("Dispatching background workers...");
     try {
@@ -44,6 +47,7 @@ export default function Watchlist() {
       });
       if (res.ok) {
         setStatus("Tasks routed to API background pool!");
+        toast.success("Batch scan dispatched!");
         setTimeout(() => router.push('/dashboard/trades'), 1500);
       } else {
         setStatus("Failed to dispatch tasks.");
@@ -52,6 +56,13 @@ export default function Watchlist() {
       setStatus("Cluster connection error.");
     }
   };
+
+  const SkeletonRow = () => (
+    <div className="flex justify-between items-center bg-slate-950 border border-slate-800 p-4 rounded-lg animate-pulse">
+      <div className="h-6 w-20 bg-slate-800 rounded"></div>
+      <div className="h-6 w-16 bg-slate-800 rounded"></div>
+    </div>
+  );
 
   if (!userId) return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-emerald-400"><Activity className="animate-spin" size={40} /></div>;
 
@@ -88,7 +99,7 @@ export default function Watchlist() {
               value={newTicker} 
               onChange={(e) => setNewTicker(e.target.value.toUpperCase())}
               placeholder="Add ticker (e.g. AMZN)" 
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-emerald-500 text-white uppercase"
+              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 focus:outline-none focus:border-emerald-500 text-white uppercase font-mono"
             />
             <button type="submit" className="bg-slate-800 hover:bg-slate-700 border border-slate-700 px-4 py-3 rounded-lg transition-colors flex items-center justify-center">
               <Plus size={20} className="text-emerald-400" />
@@ -96,18 +107,23 @@ export default function Watchlist() {
           </form>
 
           <div className="space-y-3 mb-8">
-            {tickers.map((t, idx) => (
+            {isLoading ? (
+              <>
+                <SkeletonRow />
+                <SkeletonRow />
+                <SkeletonRow />
+              </>
+            ) : tickers.map((t, idx) => (
               <div key={idx} className="flex justify-between items-center bg-slate-950 border border-slate-800 p-4 rounded-lg">
-                <span className="font-bold tracking-wider">{t}</span>
+                <span className="font-bold tracking-wider font-mono">{t}</span>
                 <button onClick={() => removeTicker(t)} className="text-slate-500 hover:text-red-400 transition-colors">
                   <Trash2 size={18} />
                 </button>
               </div>
             ))}
-            {tickers.length === 0 && <p className="text-slate-500 text-center py-4">Watchlist is empty.</p>}
+            {tickers.length === 0 && !isLoading && <p className="text-slate-500 text-center py-4">Watchlist is empty.</p>}
           </div>
 
-          {/* CRITICAL FIX: Explicit type="button" limits it strictly to the onClick behavior */}
           <button 
             type="button"
             onClick={dispatchSwarm} 
@@ -118,6 +134,15 @@ export default function Watchlist() {
           </button>
         </div>
       </main>
+    </div>
+  );
+}
+
+function SkeletonRow() {
+  return (
+    <div className="flex justify-between items-center bg-slate-950 border border-slate-800 p-4 rounded-lg animate-pulse">
+      <div className="h-6 w-20 bg-slate-800 rounded"></div>
+      <div className="h-6 w-16 bg-slate-800 rounded"></div>
     </div>
   );
 }
