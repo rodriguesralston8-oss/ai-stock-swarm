@@ -115,7 +115,7 @@ export default function Trades() {
                       <td className={`p-4 font-bold ${trade.direction === 'BEARISH' ? 'text-red-400' : 'text-emerald-400'}`}>
                         {trade.direction}
                       </td>
-                      <td className="p-4 text-purple-400">{trade.confidence_score}%</td>
+                      <td className="p-4 text-blue-400">{trade.confidence_score}%</td>
                       <td className="p-4">
                         <span className={`text-xs px-2 py-1 rounded border ${trade.status === 'CLOSED' ? 'bg-slate-800 text-slate-400 border-slate-700' : 'bg-blue-500/20 text-blue-400 border-blue-500/30'}`}>
                           {trade.status}
