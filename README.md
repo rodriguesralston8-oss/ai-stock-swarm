@@ -2,7 +2,7 @@
 
 A production-ready monorepo application that ingests live market data, calculates quantitative technical indicators, feeds features into a Large Language Model for directional price prediction, and visualizes the telemetry on a modern web dashboard.
 
-## Architecture Overview
+## Architecture Overview 
 
 ```
 monorepo-root/
